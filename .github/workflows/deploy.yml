@@ -37,6 +37,7 @@ jobs:
         run: npm run build
         env:
           CI: false
+          PUBLIC_URL: /MPC
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
