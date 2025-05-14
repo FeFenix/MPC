@@ -2,7 +2,7 @@
   "name": "mpc",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://fente.github.io/MPC",
+  "homepage": "https://fefenix.github.io/MPC",
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
     "@emotion/react": "^11.11.3",
@@ -48,5 +48,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
   }
 }
