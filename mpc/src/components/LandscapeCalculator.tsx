@@ -339,7 +339,7 @@ export const LandscapeCalculator: React.FC = () => {
               Map Size
             </Typography>
 
-            <Grid container spacing={2}>
+            <Grid container spacing={2} sx={{ alignItems: 'flex-end' }}>
               <Grid item xs={12} md={6}>
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body2" gutterBottom>
@@ -399,7 +399,7 @@ export const LandscapeCalculator: React.FC = () => {
                 <Divider sx={{ my: 2 }} />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 220 }}>
                   <Box sx={{ position: 'relative', width: 220, height: 220, border: '1px solid #ddd', bgcolor: '#fafafa' }}>
                     {/* proportional inner rectangle with arrows and labels */}
@@ -429,26 +429,26 @@ export const LandscapeCalculator: React.FC = () => {
                                     </Box>
                                     <svg viewBox="0 0 220 12" preserveAspectRatio="none" style={{ position: 'absolute', top: 8, left: 8, right: 8, width: 'calc(100% - 16px)', height: 10 }}>
                             <defs>
-                                        <marker id="arrowHead" markerWidth="6" markerHeight="6" refX="4" refY="3" orient="auto">
-                                          <path d="M0,0 L6,3 L0,6 z" fill="#1976d2" />
+                                        <marker id="arrowHead" markerWidth="5" markerHeight="5" refX="3" refY="2.5" orient="auto">
+                                          <path d="M0,0 L5,2.5 L0,5 z" fill="#1976d2" />
                                         </marker>
                             </defs>
-                                      <line x1="6" y1="5" x2="214" y2="5" stroke="#1976d2" strokeWidth="2" markerStart="url(#arrowHead)" markerEnd="url(#arrowHead)" strokeLinecap="round" />
+                                      <line x1="20" y1="5" x2="200" y2="5" stroke="#1976d2" strokeWidth="2" markerStart="url(#arrowHead)" markerEnd="url(#arrowHead)" strokeLinecap="round" />
                           </svg>
 
                           {/* full-height right arrow with label */}
                           <Box sx={{ position: 'absolute', right: -48, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Box sx={{ display: 'inline-block', bgcolor: '#1976d2', color: 'white', fontWeight: 600, px: 1, py: '2px', borderRadius: 0.5, fontSize: 12, writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                            <Box sx={{ display: 'inline-block', color: '#1976d2', fontWeight: 600, fontSize: 12, writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
                               {`Length: ${state.size.length}`}
                             </Box>
                           </Box>
-                          <svg viewBox="0 0 12 220" preserveAspectRatio="none" style={{ position: 'absolute', top: 8, right: 8, width: 10, height: 'calc(100% - 16px)' }}>
+                          <svg viewBox="0 0 12 220" preserveAspectRatio="none" style={{ position: 'absolute', top: 20, right: 8, width: 10, height: 'calc(100% - 40px)' }}>
                             <defs>
-                              <marker id="arrowHeadV" markerWidth="6" markerHeight="6" refX="3" refY="4" orient="auto">
-                                <path d="M0,0 L6,3 L0,6 z" fill="#1976d2" />
+                              <marker id="arrowHeadV" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto">
+                                <polygon points="0,0 5,2.5 0,5" fill="#1976d2" />
                               </marker>
                             </defs>
-                            <line x1="6" y1="6" x2="6" y2="214" stroke="#1976d2" strokeWidth="2" markerStart="url(#arrowHeadV)" markerEnd="url(#arrowHeadV)" strokeLinecap="round" />
+                            <line x1="6" y1="10" x2="6" y2="200" stroke="#1976d2" strokeWidth="2" markerStart="url(#arrowHeadV)" markerEnd="url(#arrowHeadV)" strokeLinecap="round" />
                           </svg>
                           <Box sx={{ position: 'absolute', left, top, width: innerW, height: innerH, bgcolor: '#1976d2', opacity: 0.12, border: '2px solid rgba(25,118,210,0.6)' }} />
                         </>
@@ -462,9 +462,10 @@ export const LandscapeCalculator: React.FC = () => {
         </Grid>
 
         {/* Pricing Formula (separate block) and Total sidebar */}
-        <Grid container spacing={3} sx={{ mt: 3 }}>
-          <Grid item xs={12} md={8}>
-            <Paper elevation={6} sx={{ p: { xs: 2, md: 4 }, bgcolor: 'background.paper' }}>
+        <Grid item xs={12} sx={{ mt: 3 }}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={8}>
+              <Paper elevation={6} sx={{ p: { xs: 2, md: 4 }, bgcolor: 'background.paper' }}>
               <Typography variant="h6" gutterBottom>
                 Pricing Formula
               </Typography>
@@ -485,9 +486,9 @@ export const LandscapeCalculator: React.FC = () => {
           </Grid>
           <Grid item xs={12} md={4}>
             <Paper
-              elevation={2}
+              elevation={6}
               sx={{
-                p: 3,
+                p: { xs: 2, md: 4 },
                 bgcolor: '#1976d2',
                 color: 'white',
                 display: 'flex',
@@ -539,13 +540,14 @@ export const LandscapeCalculator: React.FC = () => {
                   Confirm
                 </Button>
               </Box>
-            </Paper>
+              </Paper>
+            </Grid>
           </Grid>
         </Grid>
 
         {/* Features Table */}
-        <Grid item xs={12} md={8}>
-          <Paper elevation={6} sx={{ p: { xs: 2, md: 4 }, bgcolor: 'background.paper' }}>
+        <Grid item xs={12}>
+          <Paper elevation={6} sx={{ p: { xs: 2, md: 4 }, bgcolor: 'background.paper', borderRadius: 2 }}>
             <Typography variant="h6" gutterBottom>
               Additional Features
             </Typography>
@@ -579,8 +581,6 @@ export const LandscapeCalculator: React.FC = () => {
             </TableContainer>
           </Paper>
         </Grid>
-
-        
       </Grid>
     </Box>
   );
