@@ -15,7 +15,7 @@ const theme = createTheme({
       contrastText: '#FFFFFF',
     },
     background: {
-      default: '#FFFBFE', // soft background per M3 light
+      default: '#F7F3FF', // soft background per M3 light
       paper: '#FFFFFF',
     },
     text: {
@@ -29,7 +29,8 @@ const theme = createTheme({
   },
   typography: {
     fontFamily: 'Roboto, "Helvetica Neue", Arial, sans-serif',
-    h4: { fontWeight: 600 },
+    h3: { fontWeight: 700, fontSize: '2rem' },
+    h4: { fontWeight: 700, fontSize: '1.5rem' },
     h5: { fontWeight: 600 },
     h6: { fontWeight: 600 },
     body1: { fontSize: '1rem' },
@@ -51,7 +52,8 @@ const theme = createTheme({
     MuiPaper: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
+          borderRadius: 16,
+          boxShadow: '0 8px 24px rgba(16,24,40,0.08)',
         },
       },
     },

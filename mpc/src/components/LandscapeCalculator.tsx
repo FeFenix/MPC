@@ -328,15 +328,20 @@ export const LandscapeCalculator: React.FC = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 1200, margin: '0 auto', padding: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Minecraft Landscape Map Calculator
-      </Typography>
+    <Box sx={{ width: '100%', px: { xs: 2, md: 6 }, py: { xs: 3, md: 6 } }}>
+      <Box sx={{ textAlign: 'center', mb: 4 }}>
+        <Typography className="hero-title" component="h1">
+          Minecraft Landscape Map Calculator
+        </Typography>
+        <Typography className="hero-subtitle" sx={{ mt: 1 }}>
+          Create custom Minecraft map landscapes — prices estimate and delivery time calculated instantly.
+        </Typography>
+      </Box>
 
       <Grid container spacing={3} sx={{ mt: 1 }}>
         {/* Map Size Section */}
         <Grid item xs={12} md={12}>
-          <Paper elevation={2} sx={{ p: 3 }}>
+          <Paper elevation={6} sx={{ p: { xs: 2, md: 4 }, bgcolor: 'background.paper' }}>
             <Typography variant="h6" gutterBottom>
               Map Size
             </Typography>
@@ -466,7 +471,7 @@ export const LandscapeCalculator: React.FC = () => {
         {/* Pricing Formula (separate block) and Total sidebar */}
         <Grid container spacing={3}>
           <Grid item xs={12} md={8}>
-            <Paper elevation={2} sx={{ p: 3 }}>
+            <Paper elevation={6} sx={{ p: { xs: 2, md: 4 }, bgcolor: 'background.paper' }}>
               <Typography variant="h6" gutterBottom>
                 Pricing Formula
               </Typography>
@@ -547,7 +552,7 @@ export const LandscapeCalculator: React.FC = () => {
 
         {/* Features Table */}
         <Grid item xs={12} md={8}>
-          <Paper elevation={2} sx={{ p: 3 }}>
+          <Paper elevation={6} sx={{ p: { xs: 2, md: 4 }, bgcolor: 'background.paper' }}>
             <Typography variant="h6" gutterBottom>
               Additional Features
             </Typography>

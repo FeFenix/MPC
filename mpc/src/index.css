@@ -7,6 +7,21 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* subtle gradient background to feel promotional */
+  background: linear-gradient(180deg, #FBF7FF 0%, #F4F2FF 50%, #FFFFFF 100%);
+  color: #1C1B1F;
+}
+
+/* Utility: larger hero title */
+.hero-title {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.hero-subtitle {
+  font-size: 1rem;
+  color: #49454F;
 }
 
 code {
