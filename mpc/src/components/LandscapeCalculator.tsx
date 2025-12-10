@@ -46,7 +46,6 @@ const updatePricing = (s: LandscapeCalculatorState) => {
   const { width, length } = s.size;
   const pricing = computeFromSize(width, length);
   let totalPrice = pricing.basePrice;
-  let extraDays = 0;
 
   const addFeatureCost = (f?: Feature) => (f && f.enabled ? f.pricePerUnit * f.quantity : 0);
 
@@ -55,7 +54,7 @@ const updatePricing = (s: LandscapeCalculatorState) => {
     if (k === 'structures' || k === 'customFeature') return;
     totalPrice += addFeatureCost(f as Feature);
     if (f && (f as Feature).enabled) {
-      extraDays += ((f as Feature).daysPerUnit || 0) * ((f as Feature).quantity || 0);
+      extraDays += ((f as Feature).daysPerUnit || 0);
     }
   });
 
@@ -63,7 +62,7 @@ const updatePricing = (s: LandscapeCalculatorState) => {
   Object.entries(s.features.structures).forEach(([, f]) => {
     totalPrice += addFeatureCost(f);
     if (f && (f as Feature).enabled) {
-      extraDays += ((f as Feature).daysPerUnit || 0) * ((f as Feature).quantity || 0);
+      extraDays += ((f as Feature).daysPerUnit || 0);
     }
   });
 
@@ -71,7 +70,7 @@ const updatePricing = (s: LandscapeCalculatorState) => {
   if (s.features.customFeature) {
     totalPrice += addFeatureCost(s.features.customFeature);
     if (s.features.customFeature.enabled) {
-      extraDays += (s.features.customFeature.daysPerUnit || 0) * (s.features.customFeature.quantity || 0);
+      extraDays += (s.features.customFeature.daysPerUnit || 0);
     }
   }
 
@@ -80,7 +79,7 @@ const updatePricing = (s: LandscapeCalculatorState) => {
     basePrice: pricing.basePrice,
     recommendedDays: pricing.recommendedDays,
     totalPrice: Math.max(0, Math.round(totalPrice)),
-    totalDays: Math.max(pricing.recommendedDays + Math.round(extraDays), pricing.recommendedDays),
+    totalDays: pricing.recommendedDays + Math.round(extraDays),
     area: pricing.area,
   } as LandscapeCalculatorState;
 };
@@ -326,7 +325,7 @@ export const LandscapeCalculator: React.FC = () => {
 
       <Grid container spacing={3} sx={{ mt: 1 }}>
         {/* Map Size Section */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={12}>
           <Paper elevation={2} sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Map Size
@@ -435,8 +434,35 @@ export const LandscapeCalculator: React.FC = () => {
                       const top = Math.round((220 - innerH) / 2);
                       return (
                         <>
-                          <Box sx={{ position: 'absolute', top: 6, left: 0, right: 0, textAlign: 'center', fontSize: 12, color: '#333' }}>↔ Width: {state.size.width}</Box>
-                          <Box sx={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%) rotate(90deg)', transformOrigin: 'center', fontSize: 12, color: '#333' }}>↕ Length: {state.size.length}</Box>
+                          {/* full-width top arrow with label */}
+                          <Box sx={{ position: 'absolute', top: -10, left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+                            <Box sx={{ display: 'inline-block', bgcolor: 'yellow', color: 'red', fontWeight: 700, px: 1, py: '2px', borderRadius: 0.5, boxShadow: '0 0 0 3px rgba(0,0,0,0.02)', textAlign: 'center', fontSize: 13 }}>
+                              {`Width: ${state.size.width}`}
+                            </Box>
+                          </Box>
+                          <svg viewBox="0 0 220 12" preserveAspectRatio="none" style={{ position: 'absolute', top: 6, left: 4, right: 4, width: 'calc(100% - 8px)', height: 12 }}>
+                            <defs>
+                              <marker id="arrowHead" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto">
+                                <path d="M0,0 L8,4 L0,8 z" fill="red" />
+                              </marker>
+                            </defs>
+                            <line x1="6" y1="6" x2="214" y2="6" stroke="red" strokeWidth="4" markerStart="url(#arrowHead)" markerEnd="url(#arrowHead)" strokeLinecap="round" />
+                          </svg>
+
+                          {/* full-height right arrow with label */}
+                          <Box sx={{ position: 'absolute', right: -72, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                            <Box sx={{ display: 'inline-block', bgcolor: 'yellow', color: 'red', fontWeight: 700, px: 1, py: '2px', borderRadius: 0.5, fontSize: 13 }}>
+                              {`Length: ${state.size.length}`}
+                            </Box>
+                          </Box>
+                          <svg viewBox="0 0 12 220" preserveAspectRatio="none" style={{ position: 'absolute', top: 4, right: 6, width: 12, height: 'calc(100% - 8px)' }}>
+                            <defs>
+                              <marker id="arrowHeadV" markerWidth="8" markerHeight="8" refX="4" refY="5" orient="auto">
+                                <path d="M0,0 L8,4 L0,8 z" fill="red" />
+                              </marker>
+                            </defs>
+                            <line x1="6" y1="6" x2="6" y2="214" stroke="red" strokeWidth="4" markerStart="url(#arrowHeadV)" markerEnd="url(#arrowHeadV)" strokeLinecap="round" />
+                          </svg>
                           <Box sx={{ position: 'absolute', left, top, width: innerW, height: innerH, bgcolor: '#1976d2', opacity: 0.12, border: '2px solid rgba(25,118,210,0.6)' }} />
                         </>
                       );
