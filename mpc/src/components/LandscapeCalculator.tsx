@@ -184,7 +184,7 @@ export const LandscapeCalculator: React.FC = () => {
   }, []); // Run only on mount
 
   // Add state for temporary input values
-  const [tempInputs, setTempInputs] = useState({
+  const [tempInputs, setTempInputs] = useState<{ width: string; length: string }>({
     width: state.size.width.toString(),
     length: state.size.length.toString()
   });
@@ -245,7 +245,7 @@ export const LandscapeCalculator: React.FC = () => {
   const handleManualSizeChange = (field: 'width' | 'length') => (event: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = event.target.value;
     
-    setTempInputs(prev => ({
+    setTempInputs((prev: { width: string; length: string }) => ({
       ...prev,
       [field]: newValue
     }));
@@ -435,6 +435,20 @@ export const LandscapeCalculator: React.FC = () => {
     return (area / 1000000).toFixed(2);
   };
 
+  // Derived values for the power-law formula requested by the user
+  // Area in blocks (rectangular map)
+  const rectArea = state.size.width * state.size.length;
+  // size = side length for a square map equivalent to the area
+  const derivedSize = Math.sqrt(rectArea);
+  // A = area in millions of blocks
+  const A = rectArea / 1_000_000;
+  // Pbase = 26.58 * A^0.414
+  const rawPbase = 26.58 * Math.pow(Math.max(A, 0), 0.414);
+  // If size >= 15000, apply multiplier
+  const SIZE_THRESHOLD = 15000;
+  const PbaseAdjusted = derivedSize >= SIZE_THRESHOLD ? rawPbase * 1.96 : rawPbase;
+  const formatNumber = (n: number, digits = 2) => Number.isFinite(n) ? n.toFixed(digits) : 'N/A';
+
   const getEnabledFeatures = () => {
     const features: { name: string; price: number; days: number }[] = [];
     
@@ -591,7 +605,7 @@ export const LandscapeCalculator: React.FC = () => {
                           value={tempInputs.width}
                           onChange={handleManualSizeChange('width')}
                           onBlur={handleInputBlur('width')}
-                          onFocus={(e) => e.target.select()}
+                          onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.target.select()}
                           inputProps={{ 
                             min: MAP_SIZE_CONFIG.min, 
                             max: MAP_SIZE_CONFIG.max,
@@ -648,7 +662,7 @@ export const LandscapeCalculator: React.FC = () => {
                           value={tempInputs.length}
                           onChange={handleManualSizeChange('length')}
                           onBlur={handleInputBlur('length')}
-                          onFocus={(e) => e.target.select()}
+                          onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.target.select()}
                           inputProps={{ 
                             min: MAP_SIZE_CONFIG.min, 
                             max: MAP_SIZE_CONFIG.max,
@@ -731,6 +745,36 @@ export const LandscapeCalculator: React.FC = () => {
           </Paper>
         </Grid>
 
+        {/* Formula preview and live values (power-law) */}
+        <Grid item xs={12} md={12}>
+          <Paper elevation={3} sx={{ p: 3, mb: 3, backgroundColor: '#fff' }}>
+            <Typography variant="h6" gutterBottom>
+              Pricing Formula (live preview)
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                Pbase = 26.58 * A^0.414
+              </Typography>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                A = (size^2) / 10^6, where size = sqrt(width * length)
+              </Typography>
+              <Divider sx={{ my: 1 }} />
+              <Typography variant="body2">Width: {state.size.width} blocks</Typography>
+              <Typography variant="body2">Length: {state.size.length} blocks</Typography>
+              <Typography variant="body2">Area: {rectArea.toLocaleString()} blocks ({formatNumber(A)} million)</Typography>
+              <Typography variant="body2">Derived size (sqrt(area)): {formatNumber(derivedSize, 0)} blocks</Typography>
+              <Typography variant="body2">Raw Pbase: ${formatNumber(rawPbase)}</Typography>
+              {derivedSize >= SIZE_THRESHOLD ? (
+                <Typography variant="body2" sx={{ color: 'warning.main' }}>
+                  Size ≥ {SIZE_THRESHOLD} → applied multiplier 1.96 → Adjusted Pbase: ${formatNumber(PbaseAdjusted)}
+                </Typography>
+              ) : (
+                <Typography variant="body2">Adjusted Pbase: ${formatNumber(PbaseAdjusted)}</Typography>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
+
         <Grid item xs={12} md={8}>
           <Paper elevation={3} sx={{ p: 4, backgroundColor: '#fff' }}>
             <Typography variant="h6" gutterBottom>
@@ -764,7 +808,7 @@ export const LandscapeCalculator: React.FC = () => {
                   {Object.entries(state.features.structures).map(([key, feature]) => 
                     renderFeatureRow(
                       key,
-                      feature,
+                      feature as Feature,
                       (field) => handleFeatureChange(key, true, field)
                     )
                   )}

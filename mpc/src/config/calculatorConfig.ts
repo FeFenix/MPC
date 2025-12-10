@@ -107,6 +107,16 @@ export const FEATURES_CONFIG = {
   }
 };
 
+// Make sure floatingIslands is properly exported as part of FEATURES_CONFIG
+if (!(FEATURES_CONFIG as any).floatingIslands) {
+  (FEATURES_CONFIG as any).floatingIslands = {
+    name: "Floating Islands",
+    pricePerUnit: 30,
+    daysPerUnit: 5,
+    description: "Custom floating islands with unique biomes (500x500 blocks per unit)"
+  };
+}
+
 // Налаштування користувацької функції
 export const CUSTOM_FEATURE_DEFAULT = {
   name: "Custom Feature",
