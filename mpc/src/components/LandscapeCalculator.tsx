@@ -328,10 +328,10 @@ export const LandscapeCalculator: React.FC = () => {
   };
 
   return (
-    <Box sx={{ width: '100%', px: { xs: 2, md: 6 }, py: { xs: 3, md: 6 } }}>
+    <Box sx={{ width: '100%', px: { xs: 2, md: 6 }, py: { xs: 1, md: 2 } }}>
       <Box sx={{ mb: 4 }} />
 
-      <Grid container spacing={3} sx={{ mt: 1 }}>
+      <Grid container spacing={3} sx={{ mt: 0 }}>
         {/* Map Size Section */}
         <Grid item xs={12} md={12}>
           <Paper elevation={6} sx={{ p: { xs: 2, md: 4 }, bgcolor: 'background.paper' }}>
@@ -462,7 +462,7 @@ export const LandscapeCalculator: React.FC = () => {
         </Grid>
 
         {/* Pricing Formula (separate block) and Total sidebar */}
-        <Grid container spacing={3} sx={{ mt: 4, px: { xs: 2, md: 6 } }}>
+        <Grid container spacing={3} sx={{ mt: 3 }}>
           <Grid item xs={12} md={8}>
             <Paper elevation={6} sx={{ p: { xs: 2, md: 4 }, bgcolor: 'background.paper' }}>
               <Typography variant="h6" gutterBottom>
