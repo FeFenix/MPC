@@ -46,6 +46,7 @@ const updatePricing = (s: LandscapeCalculatorState) => {
   const { width, length } = s.size;
   const pricing = computeFromSize(width, length);
   let totalPrice = pricing.basePrice;
+  let extraDays = 0;
 
   const addFeatureCost = (f?: Feature) => (f && f.enabled ? f.pricePerUnit * f.quantity : 0);
 
