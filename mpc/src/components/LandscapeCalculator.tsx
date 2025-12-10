@@ -334,7 +334,7 @@ export const LandscapeCalculator: React.FC = () => {
       <Grid container spacing={3} sx={{ mt: 0 }}>
         {/* Map Size Section */}
         <Grid item xs={12} md={12}>
-          <Paper elevation={6} sx={{ p: { xs: 2, md: 4 }, bgcolor: 'background.paper', transform: 'scale(2.25)', transformOrigin: 'top left', width: 'calc(100% / 2.25)' }}>
+          <Paper elevation={6} sx={{ p: { xs: 2, md: 4 }, bgcolor: 'background.paper' }}>
             <Typography variant="h6" gutterBottom>
               Map Size
             </Typography>
@@ -546,7 +546,7 @@ export const LandscapeCalculator: React.FC = () => {
         </Grid>
 
         {/* Features Table */}
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12}>
           <Paper elevation={6} sx={{ p: { xs: 2, md: 4 }, bgcolor: 'background.paper', borderRadius: 2 }}>
             <Typography variant="h6" gutterBottom>
               Additional Features
