@@ -46,6 +46,7 @@ const updatePricing = (s: LandscapeCalculatorState) => {
   const { width, length } = s.size;
   const pricing = computeFromSize(width, length);
   let totalPrice = pricing.basePrice;
+  let extraDays = 0;
 
   const addFeatureCost = (f?: Feature) => (f && f.enabled ? f.pricePerUnit * f.quantity : 0);
 
@@ -53,22 +54,33 @@ const updatePricing = (s: LandscapeCalculatorState) => {
   Object.entries(s.features).forEach(([k, f]) => {
     if (k === 'structures' || k === 'customFeature') return;
     totalPrice += addFeatureCost(f as Feature);
+    if (f && (f as Feature).enabled) {
+      extraDays += ((f as Feature).daysPerUnit || 0) * ((f as Feature).quantity || 0);
+    }
   });
 
   // Sum structure features
   Object.entries(s.features.structures).forEach(([, f]) => {
     totalPrice += addFeatureCost(f);
+    if (f && (f as Feature).enabled) {
+      extraDays += ((f as Feature).daysPerUnit || 0) * ((f as Feature).quantity || 0);
+    }
   });
 
   // Add custom feature cost
-  if (s.features.customFeature) totalPrice += addFeatureCost(s.features.customFeature);
+  if (s.features.customFeature) {
+    totalPrice += addFeatureCost(s.features.customFeature);
+    if (s.features.customFeature.enabled) {
+      extraDays += (s.features.customFeature.daysPerUnit || 0) * (s.features.customFeature.quantity || 0);
+    }
+  }
 
   return {
     ...s,
     basePrice: pricing.basePrice,
     recommendedDays: pricing.recommendedDays,
     totalPrice: Math.max(0, Math.round(totalPrice)),
-    totalDays: pricing.recommendedDays,
+    totalDays: Math.max(pricing.recommendedDays + Math.round(extraDays), pricing.recommendedDays),
     area: pricing.area,
   } as LandscapeCalculatorState;
 };
@@ -83,7 +95,8 @@ export const LandscapeCalculator: React.FC = () => {
     length: state.size.length.toString(),
   });
 
-  const SIZE_MARKS = [500,1000,2000,2500,5000,6000,10000,15000,20000,25000,30000].map(v=>({value:v,label:String(v)}));
+  // marks without textual labels per user request
+  const SIZE_MARKS = [500,1000,2000,2500,5000,6000,10000,15000,20000,25000,30000].map(v=>({value:v}));
 
   // Initialize fresh state on mount
   useEffect(() => {
@@ -218,8 +231,8 @@ export const LandscapeCalculator: React.FC = () => {
           <TextField
             type="number"
             value={feature.pricePerUnit}
-            onChange={handleFeatureChange(path, 'pricePerUnit', (v) => Math.max(0, parseFloat(v) || 0))}
-            inputProps={{ min: 0, step: 0.01 }}
+            onChange={handleFeatureChange(path, 'pricePerUnit', (v) => parseInt(v) || 0)}
+            inputProps={{ step: 1 }}
             size="small"
             sx={{ width: 80 }}
           />
@@ -228,8 +241,8 @@ export const LandscapeCalculator: React.FC = () => {
           <TextField
             type="number"
             value={feature.daysPerUnit}
-            onChange={handleFeatureChange(path, 'daysPerUnit', (v) => Math.max(0, parseInt(v) || 0))}
-            inputProps={{ min: 0 }}
+            onChange={handleFeatureChange(path, 'daysPerUnit', (v) => parseInt(v) || 0)}
+            inputProps={{ step: 1 }}
             size="small"
             sx={{ width: 60 }}
           />
@@ -253,7 +266,8 @@ export const LandscapeCalculator: React.FC = () => {
   const totalChunks = chunksWidth * chunksLength;
 
   const texFormula = `P_{base} = 26.58\\cdot A^{0.414}`;
-  const texA = `A = \\dfrac{size^{2}}{10^{6}} = \\dfrac{${derivedSize.toFixed(0)}^{2}}{10^{6}} = ${A.toFixed(3)}`;
+  // show width and length explicitly and the computed A
+  const texA = `A = \\dfrac{${state.size.width}\\times ${state.size.length}}{10^{6}} = ${A.toFixed(3)}`;
 
   const getEnabledFeatures = () => {
     const features: { name: string; price: number }[] = [];
@@ -375,12 +389,34 @@ export const LandscapeCalculator: React.FC = () => {
                   Size (short): {formatShort(state.size.width)} x {formatShort(state.size.length)}
                 </Typography>
                 <Typography variant="body2">Chunks: {totalChunks} ({chunksWidth} x {chunksLength})</Typography>
+                <Divider sx={{ my: 2 }} />
+                {/* Pricing Formula block (split into two parts) */}
+                <Box sx={{ mt: 2, bgcolor: '#f9f9f9', p: 2, borderRadius: 1 }}>
+                  <Typography variant="subtitle1" gutterBottom>Pricing Formula</Typography>
+                  {/* Upper: simple formula display */}
+                  <Box sx={{ mb: 1 }}>
+                    <BlockMath math={texFormula} />
+                  </Box>
+
+                  <Divider sx={{ my: 1 }} />
+
+                  {/* Lower: expanded formulas with substituted values */}
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                      Inserted values: width = {state.size.width} blocks, length = {state.size.length} blocks
+                    </Typography>
+                    <BlockMath math={`A = \\dfrac{${state.size.width} \\times ${state.size.length}}{10^{6}} = ${A.toFixed(3)}`} />
+                    <Typography variant="body2" sx={{ mt: 1 }}>Raw Pbase: ${formatNumber(rawPbase)}</Typography>
+                    <Typography variant="body2">Adjusted Pbase: ${formatNumber(PbaseAdjusted)} {derivedSize >= SIZE_THRESHOLD ? '(multiplier 1.96 applied)' : ''}</Typography>
+                    <Typography variant="body2" sx={{ mt: 1 }}>Final Base Price (rounded to tens): ${state.basePrice}</Typography>
+                  </Box>
+                </Box>
               </Grid>
 
               <Grid item xs={12} md={6}>
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 220 }}>
                   <Box sx={{ position: 'relative', width: 220, height: 220, border: '1px solid #ddd', bgcolor: '#fafafa' }}>
-                    {/* proportional inner rectangle */}
+                    {/* proportional inner rectangle with arrows and labels */}
                     {(() => {
                       const max = 180; // inner max
                       const w = state.size.width;
@@ -399,8 +435,8 @@ export const LandscapeCalculator: React.FC = () => {
                       const top = Math.round((220 - innerH) / 2);
                       return (
                         <>
-                          <Box sx={{ position: 'absolute', left: 4, top: 4, fontSize: 11, color: '#555' }}>Width: {state.size.width}</Box>
-                          <Box sx={{ position: 'absolute', right: 4, bottom: 4, fontSize: 11, color: '#555' }}>Length: {state.size.length}</Box>
+                          <Box sx={{ position: 'absolute', top: 6, left: 0, right: 0, textAlign: 'center', fontSize: 12, color: '#333' }}>↔ Width: {state.size.width}</Box>
+                          <Box sx={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%) rotate(90deg)', transformOrigin: 'center', fontSize: 12, color: '#333' }}>↕ Length: {state.size.length}</Box>
                           <Box sx={{ position: 'absolute', left, top, width: innerW, height: innerH, bgcolor: '#1976d2', opacity: 0.12, border: '2px solid rgba(25,118,210,0.6)' }} />
                         </>
                       );
@@ -412,28 +448,7 @@ export const LandscapeCalculator: React.FC = () => {
           </Paper>
         </Grid>
 
-        {/* Formula Section */}
-        <Grid item xs={12} md={6}>
-          <Paper elevation={2} sx={{ p: 3, bgcolor: '#f9f9f9' }}>
-            <Typography variant="h6" gutterBottom>
-              Pricing Formula
-            </Typography>
-            <Box sx={{ mb: 2 }}>
-              <BlockMath math={texFormula} />
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                Inserted values: width = {state.size.width} blocks, length = {state.size.length} blocks
-              </Typography>
-              <Box sx={{ mt: 1 }}>
-                <BlockMath math={`A = \frac{${state.size.width} \times ${state.size.length}}{10^{6}} = ${A.toFixed(3)}`} />
-              </Box>
-            </Box>
-
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="body2">Raw Pbase: ${formatNumber(rawPbase)}</Typography>
-            <Typography variant="body2">Adjusted Pbase: ${formatNumber(PbaseAdjusted)} {derivedSize >= SIZE_THRESHOLD ? '(multiplier 1.96 applied)' : ''}</Typography>
-            <Typography variant="body2" sx={{ mt: 1 }}>Final Base Price (rounded to tens): ${state.basePrice}</Typography>
-          </Paper>
-        </Grid>
+        {/* Pricing Formula: moved under Map Size (inserted inside Map Size panel) */}
 
         {/* Features Table */}
         <Grid item xs={12} md={8}>
