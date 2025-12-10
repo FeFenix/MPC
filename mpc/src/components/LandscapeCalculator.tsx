@@ -1,164 +1,69 @@
 import React, { useEffect, useState } from 'react';
+import 'katex/dist/katex.min.css';
+import { BlockMath } from 'react-katex';
 import {
   Box,
-  Card,
-  CardContent,
+  Paper,
   Typography,
   Slider,
-  Checkbox,
-  FormControlLabel,
   TextField,
-  Paper,
+  Grid,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Alert,
-  Grid,
-  Chip,
-  Divider,
+  Checkbox,
+  FormControlLabel,
   Button,
+  Divider,
 } from '@mui/material';
-import { LandscapeCalculatorState, DEFAULT_STATE, Feature, generateFreshState } from '../types/LandscapeTypes';
-import emailjs from '@emailjs/browser';
-import {
-  PRICE_PER_DAY_ADJUSTMENT,
-  MINIMUM_TOTAL_PRICE,
-  MAP_SIZE_CONFIG,
-  DELIVERY_CONFIG,
-  FEATURES_CONFIG,
-  CUSTOM_FEATURE_DEFAULT
-} from '../config/calculatorConfig';
+import { LandscapeCalculatorState, Feature, generateFreshState } from '../types/LandscapeTypes';
+import { MAP_SIZE_CONFIG, FEATURES_CONFIG, CUSTOM_FEATURE_DEFAULT } from '../config/calculatorConfig';
 
-// Initialize EmailJS with public key
-emailjs.init({
-  publicKey: process.env.REACT_APP_EMAILJS_PUBLIC_KEY || '',
-  blockHeadless: false, // This allows the code to work in test environments
-});
+// Constants per user's specification
+const SIZE_THRESHOLD = 15000;
+const T_MIN = 5; // days
+const T_PER_MILLION = 0.21; // days per million blocks
 
-// Update the verifyEmailJSInit function
-const verifyEmailJSInit = () => {
-  try {
-    emailjs.init({
-      publicKey: process.env.REACT_APP_EMAILJS_PUBLIC_KEY || '',
-      blockHeadless: false,
-    });
-    console.log("EmailJS initialized successfully");
-  } catch (error) {
-    console.error("EmailJS initialization error:", error);
-  }
-};
-
-const calculatePricing = (width: number, length: number, deliveryDays: number) => {
+// computeFromSize: returns area, A (millions), derivedSize, raw/adjusted prices and recommended days
+const computeFromSize = (width: number, length: number) => {
   const area = width * length;
-  const areaInMillions = area / 1000000;
-  
-  // Calculate base price based on total area points
-  let basePrice;
-  
-  if (area <= 250000) { // Up to 500x500
-    basePrice = MINIMUM_TOTAL_PRICE;
-  } else if (area <= 25000000) { // Up to 5000x5000
-    const t = (area - 250000) / (25000000 - 250000);
-    basePrice = MINIMUM_TOTAL_PRICE + (165 - MINIMUM_TOTAL_PRICE) * t;
-  } else if (area <= 100000000) { // Up to 10000x10000
-    const t = (area - 25000000) / (100000000 - 25000000);
-    basePrice = 165 + (280 - 165) * t;
-  } else { // Up to 35000x35000
-    const t = (area - 100000000) / (1225000000 - 100000000);
-    basePrice = 280 + (780 - 280) * t;
-  }
-  
-  // Calculate recommended days based on area points
-  let recommendedDays;
-  
-  if (area <= 250000) {
-    recommendedDays = DELIVERY_CONFIG.defaultDays;
-  } else if (area <= 25000000) {
-    const t = (area - 250000) / (25000000 - 250000);
-    recommendedDays = Math.round(DELIVERY_CONFIG.defaultDays + (14 - DELIVERY_CONFIG.defaultDays) * t);
-  } else if (area <= 100000000) {
-    const t = (area - 25000000) / (100000000 - 25000000);
-    recommendedDays = Math.round(14 + (21 - 14) * t);
-  } else {
-    const t = (area - 100000000) / (1225000000 - 100000000);
-    recommendedDays = Math.round(21 + (37 - 21) * t);
-  }
-  
-  // Adjust price based on delivery time
-  const daysDiff = recommendedDays - deliveryDays;
-  const priceAdjustment = daysDiff * PRICE_PER_DAY_ADJUSTMENT;
-  
-  // Apply price adjustment but ensure minimum price
-  let finalPrice = Math.max(MINIMUM_TOTAL_PRICE, Math.round(basePrice + priceAdjustment));
-  
-  return {
-    basePrice: Math.round(basePrice),
-    recommendedDays,
-    totalPrice: finalPrice,
-    area
-  };
+  const A = area / 1_000_000;
+  const derivedSize = Math.sqrt(area);
+  const rawPbase = 26.58 * Math.pow(Math.max(A, 0), 0.414);
+  const adjustedPbase = derivedSize >= SIZE_THRESHOLD ? rawPbase * 1.96 : rawPbase;
+  const basePrice = Math.round(adjustedPbase);
+  const recommendedDays = Math.max(T_MIN, Math.round(A * T_PER_MILLION));
+  return { area, A, derivedSize, rawPbase, adjustedPbase, basePrice, recommendedDays };
 };
 
-const updatePricing = (newState: LandscapeCalculatorState) => {
-  const { width, length, deliveryDays } = newState.size;
-  const pricing = calculatePricing(width, length, deliveryDays);
-  
+// updatePricing: given a state, compute prices/times per user's rules
+const updatePricing = (s: LandscapeCalculatorState) => {
+  const { width, length } = s.size;
+  const pricing = computeFromSize(width, length);
+
   let totalPrice = pricing.basePrice;
-  let additionalDays = 0;
 
-  // Add feature costs
-  const addFeatureCost = (feature: Feature) => {
-    if (feature && feature.enabled) {
-      totalPrice += feature.pricePerUnit * feature.quantity;
-      additionalDays += feature.daysPerUnit * feature.quantity;
-    }
-  };
+  const addFeatureCost = (f?: Feature) => (f && f.enabled ? f.pricePerUnit * f.quantity : 0);
 
-  // Process regular features
-  Object.entries(newState.features).forEach(([key, feature]) => {
-    if (key !== 'structures' && key !== 'customFeature' && feature) {
-      const f = feature as Feature;
-      addFeatureCost(f);
-    }
+  Object.entries(s.features).forEach(([k, f]) => {
+    if (k === 'structures' || k === 'customFeature') return;
+    totalPrice += addFeatureCost(f as Feature);
   });
 
-  // Process structures separately
-  if (newState.features.structures) {
-    Object.entries(newState.features.structures).forEach(([key, feature]) => {
-      if (feature) {
-        addFeatureCost(feature);
-      }
-    });
-  }
+  Object.entries(s.features.structures).forEach(([, f]) => { totalPrice += addFeatureCost(f); });
+  if (s.features.customFeature) totalPrice += addFeatureCost(s.features.customFeature);
 
-  // Add custom feature if enabled
-  const customFeature = newState.features.customFeature;
-  if (customFeature) {
-    addFeatureCost(customFeature);
-  }
-
-  // Calculate total recommended days including feature days
-  const totalRecommendedDays = pricing.recommendedDays + additionalDays;
-  
-  // Calculate total days including user-specified delivery days
-  const totalDays = deliveryDays + additionalDays;
-
-  // Adjust price based on delivery time difference
-  const daysDiff = totalRecommendedDays - totalDays;
-  const priceAdjustment = daysDiff * PRICE_PER_DAY_ADJUSTMENT;
-  totalPrice += priceAdjustment;
-
-  return { 
-    ...newState,
+  return {
+    ...s,
     basePrice: pricing.basePrice,
-    recommendedDays: totalRecommendedDays,
-    totalPrice: Math.max(MINIMUM_TOTAL_PRICE, totalPrice), // Ensure minimum price of $30
-    totalDays,
-    area: pricing.area
-  };
+    recommendedDays: pricing.recommendedDays,
+    totalPrice: Math.max(0, Math.round(totalPrice)),
+    totalDays: pricing.recommendedDays,
+    area: pricing.area,
+  } as LandscapeCalculatorState;
 };
 
 let orderNumber = 1;
@@ -216,7 +121,7 @@ export const LandscapeCalculator: React.FC = () => {
     if (field !== 'deliveryDays') {
       // Find the closest snap point if we're within the threshold
       const closestPoint = snapPoints.find(point => 
-        Math.abs(point - finalValue) < snapThreshold
+      const A = area / 1000000; // area in millions of blocks
       );
       if (closestPoint) {
         finalValue = closestPoint;
@@ -235,10 +140,7 @@ export const LandscapeCalculator: React.FC = () => {
     if (field !== 'deliveryDays') {
       const updatedWidth = field === 'width' ? finalValue : state.size.width;
       const updatedLength = field === 'length' ? finalValue : state.size.length;
-      const pricing = calculatePricing(updatedWidth, updatedLength, state.size.deliveryDays);
-      newState.size.deliveryDays = pricing.recommendedDays;
-    }
-
+      const recommendedDays = Math.max(5, Math.round(A * 0.21)); // days per million blocks
     setState(updatePricing(newState));
   };
 
@@ -257,7 +159,7 @@ export const LandscapeCalculator: React.FC = () => {
     const numValue = Number(newValue);
     
     if (!isNaN(numValue)) {
-      const finalValue = Math.min(MAP_SIZE_CONFIG.max, Math.max(MAP_SIZE_CONFIG.min, numValue));
+      const pricing = calculatePricing(width, length);
       
       if (finalValue !== state.size[field]) {
         const newState = {
@@ -266,7 +168,6 @@ export const LandscapeCalculator: React.FC = () => {
             ...state.size,
             [field]: finalValue,
           },
-        };
         setState(updatePricing(newState));
       }
     }
@@ -294,7 +195,7 @@ export const LandscapeCalculator: React.FC = () => {
       setState(updatePricing(newState));
     }
   };
-
+      const totalDays = pricing.recommendedDays; // No additional days from features
   const handleFeatureChange = (
     feature: string,
     isStructure = false,
@@ -302,8 +203,10 @@ export const LandscapeCalculator: React.FC = () => {
   ) => (event: React.ChangeEvent<HTMLInputElement>) => {
     let value: string | number | boolean = event.target.value;
     if (field === 'enabled') {
-      value = event.target.checked;
-    } else if (field !== 'name') {
+      value = (event.target as HTMLInputElement).checked;
+    } else if (field === 'pricePerUnit') {
+      value = parseFloat(event.target.value) || 0;
+    } else if (field === 'daysPerUnit' || field === 'quantity') {
       value = parseInt(event.target.value) || 0;
     }
 
@@ -398,34 +301,25 @@ export const LandscapeCalculator: React.FC = () => {
           />
         </TableCell>
         <TableCell align="right" sx={{ py: 1 }}>
-          {isCustom ? (
-            <TextField
-              type="number"
-              value={feature.pricePerUnit}
-              onChange={onChange('pricePerUnit')}
-              disabled={!feature.enabled}
-              inputProps={{ min: 0 }}
-              size="small"
-              sx={{ width: 80 }}
-            />
-          ) : (
-            <Typography>${featureConfig.pricePerUnit}</Typography>
-          )}
+          <TextField
+            type="number"
+            value={feature.pricePerUnit}
+            onChange={onChange('pricePerUnit')}
+            // allow editing price even if feature disabled so user can set custom values
+            inputProps={{ min: 0, step: 0.01 }}
+            size="small"
+            sx={{ width: 80 }}
+          />
         </TableCell>
         <TableCell align="right" sx={{ py: 1 }}>
-          {isCustom ? (
-            <TextField
-              type="number"
-              value={feature.daysPerUnit}
-              onChange={onChange('daysPerUnit')}
-              disabled={!feature.enabled}
-              inputProps={{ min: 0 }}
-              size="small"
-              sx={{ width: 60 }}
-            />
-          ) : (
-            <Typography>{featureConfig.daysPerUnit}</Typography>
-          )}
+          <TextField
+            type="number"
+            value={feature.daysPerUnit}
+            onChange={onChange('daysPerUnit')}
+            inputProps={{ min: 0 }}
+            size="small"
+            sx={{ width: 60 }}
+          />
         </TableCell>
       </TableRow>
     );
@@ -449,6 +343,10 @@ export const LandscapeCalculator: React.FC = () => {
   const PbaseAdjusted = derivedSize >= SIZE_THRESHOLD ? rawPbase * 1.96 : rawPbase;
   const formatNumber = (n: number, digits = 2) => Number.isFinite(n) ? n.toFixed(digits) : 'N/A';
 
+  // Formula rendered as KaTeX string for BlockMath
+  const texFormula = `P_{base} = 26.58\cdot A^{0.414}`;
+  const texA = `A = \dfrac{size^{2}}{10^{6}} = \dfrac{${derivedSize.toFixed(0)}^{2}}{10^{6}} = ${A.toFixed(3)}`;
+
   const getEnabledFeatures = () => {
     const features: { name: string; price: number; days: number }[] = [];
     
@@ -458,7 +356,7 @@ export const LandscapeCalculator: React.FC = () => {
         const f = feature as Feature;
         if (f.enabled) {
           features.push({
-            name: key,
+            name: f.name || key,
             price: f.pricePerUnit * f.quantity,
             days: f.daysPerUnit * f.quantity
           });
@@ -752,12 +650,12 @@ export const LandscapeCalculator: React.FC = () => {
               Pricing Formula (live preview)
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                Pbase = 26.58 * A^0.414
-              </Typography>
-              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                A = (size^2) / 10^6, where size = sqrt(width * length)
-              </Typography>
+              <Box sx={{ bgcolor: '#f5f5f5', p: 2, borderRadius: 1 }}>
+                <BlockMath math={texFormula} />
+                <Box sx={{ mt: 1 }}>
+                  <BlockMath math={texA} />
+                </Box>
+              </Box>
               <Divider sx={{ my: 1 }} />
               <Typography variant="body2">Width: {state.size.width} blocks</Typography>
               <Typography variant="body2">Length: {state.size.length} blocks</Typography>
