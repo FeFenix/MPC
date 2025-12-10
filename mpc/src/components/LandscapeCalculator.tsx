@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import 'katex/dist/katex.min.css';
-import { BlockMath } from 'react-katex';
+import { BlockMath } from './KaTeX';
 import {
   Box,
   Paper,
