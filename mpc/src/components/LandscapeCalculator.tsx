@@ -35,7 +35,8 @@ const computeFromSize = (width: number, length: number) => {
   const derivedSize = Math.sqrt(area);
   const rawPbase = 26.58 * Math.pow(Math.max(A, 0), 0.414);
   const adjustedPbase = derivedSize >= SIZE_THRESHOLD ? rawPbase * 1.96 : rawPbase;
-  const basePrice = Math.round(adjustedPbase);
+  // round to nearest tens per user request
+  const basePrice = Math.round(adjustedPbase / 10) * 10;
   const recommendedDays = Math.max(T_MIN, Math.round(A * T_PER_MILLION));
   return { area, A, derivedSize, rawPbase, adjustedPbase, basePrice, recommendedDays };
 };
@@ -81,6 +82,8 @@ export const LandscapeCalculator: React.FC = () => {
     width: state.size.width.toString(),
     length: state.size.length.toString(),
   });
+
+  const SIZE_MARKS = [500,1000,2000,2500,5000,6000,10000,15000,20000,25000,30000].map(v=>({value:v,label:String(v)}));
 
   // Initialize fresh state on mount
   useEffect(() => {
@@ -149,12 +152,19 @@ export const LandscapeCalculator: React.FC = () => {
         value = parser(value);
       }
 
-      const newState = JSON.parse(JSON.stringify(state));
-      let obj = newState.features;
+      const newState: any = JSON.parse(JSON.stringify(state));
+      // traverse from root
+      let target: any = newState;
       for (let i = 0; i < path.length - 1; i++) {
-        obj = obj[path[i]];
+        target = target[path[i]];
       }
-      obj[path[path.length - 1]][field] = value;
+      const last = path[path.length - 1];
+      // target[last] should be the feature object
+      if (!target[last]) {
+        // defensive: if feature missing, create
+        target[last] = {};
+      }
+      target[last][field] = value;
 
       setState(updatePricing(newState));
     };
@@ -169,16 +179,29 @@ export const LandscapeCalculator: React.FC = () => {
     return (
       <TableRow key={label}>
         <TableCell sx={{ py: 1 }}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={feature.enabled}
-                onChange={handleFeatureChange(path, 'enabled')}
-                size="small"
-              />
-            }
-            label={<Typography variant="body2">{label}</Typography>}
-          />
+          <Box>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={Boolean(feature.enabled)}
+                  onChange={handleFeatureChange(path, 'enabled')}
+                  size="small"
+                />
+              }
+              label={<Typography variant="body2">{label}</Typography>}
+            />
+            {/* if custom feature allow editing name */}
+            {path.includes('customFeature') && (
+              <Box sx={{ mt: 1 }}>
+                <TextField
+                  size="small"
+                  value={feature.name || ''}
+                  onChange={handleFeatureChange(path, 'name')}
+                  placeholder="Custom feature name"
+                />
+              </Box>
+            )}
+          </Box>
         </TableCell>
         <TableCell align="right" sx={{ py: 1 }}>
           <TextField
@@ -223,6 +246,11 @@ export const LandscapeCalculator: React.FC = () => {
   const PbaseAdjusted = derivedSize >= SIZE_THRESHOLD ? rawPbase * 1.96 : rawPbase;
   const formatNumber = (n: number, digits = 2) =>
     Number.isFinite(n) ? n.toFixed(digits) : 'N/A';
+
+  const formatShort = (n: number) => (n >= 1000 ? `${Math.round(n/1000)}k` : String(n));
+  const chunksWidth = Math.ceil(state.size.width / 16);
+  const chunksLength = Math.ceil(state.size.length / 16);
+  const totalChunks = chunksWidth * chunksLength;
 
   const texFormula = `P_{base} = 26.58\\cdot A^{0.414}`;
   const texA = `A = \\dfrac{size^{2}}{10^{6}} = \\dfrac{${derivedSize.toFixed(0)}^{2}}{10^{6}} = ${A.toFixed(3)}`;
@@ -290,59 +318,97 @@ export const LandscapeCalculator: React.FC = () => {
               Map Size
             </Typography>
 
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="body2" gutterBottom>
-                Width: {state.size.width} blocks
-              </Typography>
-              <TextField
-                type="number"
-                value={tempInputs.width}
-                onChange={handleManualSizeChange('width')}
-                onBlur={handleManualSizeBlur('width')}
-                fullWidth
-                size="small"
-                sx={{ mb: 2 }}
-              />
-              <Slider
-                value={state.size.width}
-                onChange={handleSliderChange('width')}
-                min={MAP_SIZE_CONFIG.min}
-                max={MAP_SIZE_CONFIG.max}
-                step={100}
-                valueLabelDisplay="auto"
-              />
-            </Box>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Width: {state.size.width} blocks
+                  </Typography>
+                  <TextField
+                    type="number"
+                    value={tempInputs.width}
+                    onChange={handleManualSizeChange('width')}
+                    onBlur={handleManualSizeBlur('width')}
+                    fullWidth
+                    size="small"
+                    sx={{ mb: 1 }}
+                  />
+                  <Slider
+                    value={state.size.width}
+                    onChange={handleSliderChange('width')}
+                    min={MAP_SIZE_CONFIG.min}
+                    max={MAP_SIZE_CONFIG.max}
+                    step={100}
+                    marks={SIZE_MARKS}
+                    valueLabelDisplay="auto"
+                  />
+                </Box>
 
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="body2" gutterBottom>
-                Length: {state.size.length} blocks
-              </Typography>
-              <TextField
-                type="number"
-                value={tempInputs.length}
-                onChange={handleManualSizeChange('length')}
-                onBlur={handleManualSizeBlur('length')}
-                fullWidth
-                size="small"
-                sx={{ mb: 2 }}
-              />
-              <Slider
-                value={state.size.length}
-                onChange={handleSliderChange('length')}
-                min={MAP_SIZE_CONFIG.min}
-                max={MAP_SIZE_CONFIG.max}
-                step={100}
-                valueLabelDisplay="auto"
-              />
-            </Box>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Length: {state.size.length} blocks
+                  </Typography>
+                  <TextField
+                    type="number"
+                    value={tempInputs.length}
+                    onChange={handleManualSizeChange('length')}
+                    onBlur={handleManualSizeBlur('length')}
+                    fullWidth
+                    size="small"
+                    sx={{ mb: 1 }}
+                  />
+                  <Slider
+                    value={state.size.length}
+                    onChange={handleSliderChange('length')}
+                    min={MAP_SIZE_CONFIG.min}
+                    max={MAP_SIZE_CONFIG.max}
+                    step={100}
+                    marks={SIZE_MARKS}
+                    valueLabelDisplay="auto"
+                  />
+                </Box>
 
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="body2">
-              Area: {(rectArea / 1_000_000).toFixed(2)}M blocks
-            </Typography>
-            <Typography variant="body2">
-              Recommended days: {state.recommendedDays}
-            </Typography>
+                <Divider sx={{ my: 1 }} />
+                <Typography variant="body2">Area: {(rectArea / 1_000_000).toFixed(2)}M blocks</Typography>
+                <Typography variant="body2">Recommended days: {state.recommendedDays}</Typography>
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  Size (short): {formatShort(state.size.width)} x {formatShort(state.size.length)}
+                </Typography>
+                <Typography variant="body2">Chunks: {totalChunks} ({chunksWidth} x {chunksLength})</Typography>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 220 }}>
+                  <Box sx={{ position: 'relative', width: 220, height: 220, border: '1px solid #ddd', bgcolor: '#fafafa' }}>
+                    {/* proportional inner rectangle */}
+                    {(() => {
+                      const max = 180; // inner max
+                      const w = state.size.width;
+                      const h = state.size.length;
+                      let innerW = max;
+                      let innerH = max;
+                      if (w === 0 || h === 0) { innerW = innerH = 10; }
+                      else if (w >= h) {
+                        innerW = max;
+                        innerH = Math.max(8, Math.round(max * (h / w)));
+                      } else {
+                        innerH = max;
+                        innerW = Math.max(8, Math.round(max * (w / h)));
+                      }
+                      const left = Math.round((220 - innerW) / 2);
+                      const top = Math.round((220 - innerH) / 2);
+                      return (
+                        <>
+                          <Box sx={{ position: 'absolute', left: 4, top: 4, fontSize: 11, color: '#555' }}>Width: {state.size.width}</Box>
+                          <Box sx={{ position: 'absolute', right: 4, bottom: 4, fontSize: 11, color: '#555' }}>Length: {state.size.length}</Box>
+                          <Box sx={{ position: 'absolute', left, top, width: innerW, height: innerH, bgcolor: '#1976d2', opacity: 0.12, border: '2px solid rgba(25,118,210,0.6)' }} />
+                        </>
+                      );
+                    })()}
+                  </Box>
+                </Box>
+              </Grid>
+            </Grid>
           </Paper>
         </Grid>
 
@@ -354,15 +420,18 @@ export const LandscapeCalculator: React.FC = () => {
             </Typography>
             <Box sx={{ mb: 2 }}>
               <BlockMath math={texFormula} />
-              <BlockMath math={texA} />
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                Inserted values: width = {state.size.width} blocks, length = {state.size.length} blocks
+              </Typography>
+              <Box sx={{ mt: 1 }}>
+                <BlockMath math={`A = \frac{${state.size.width} \times ${state.size.length}}{10^{6}} = ${A.toFixed(3)}`} />
+              </Box>
             </Box>
+
             <Divider sx={{ my: 2 }} />
-            <Typography variant="body2">
-              Base Price: ${state.basePrice}
-            </Typography>
-            <Typography variant="body2">
-              Total Price: ${state.totalPrice}
-            </Typography>
+            <Typography variant="body2">Raw Pbase: ${formatNumber(rawPbase)}</Typography>
+            <Typography variant="body2">Adjusted Pbase: ${formatNumber(PbaseAdjusted)} {derivedSize >= SIZE_THRESHOLD ? '(multiplier 1.96 applied)' : ''}</Typography>
+            <Typography variant="body2" sx={{ mt: 1 }}>Final Base Price (rounded to tens): ${state.basePrice}</Typography>
           </Paper>
         </Grid>
 
@@ -419,8 +488,9 @@ export const LandscapeCalculator: React.FC = () => {
               Total
             </Typography>
             <Box sx={{ mb: 2, textAlign: 'center' }}>
+              <Typography variant="caption">Price</Typography>
               <Typography variant="h4">${state.totalPrice}</Typography>
-              <Typography variant="h6">{state.totalDays} days</Typography>
+              <Typography variant="caption">Up to {state.totalDays} days</Typography>
             </Box>
 
             <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.2)' }} />
