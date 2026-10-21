@@ -22,9 +22,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
+          # Безпекові патчі Node — одразу, а не коли GitHub оновить образ раннера.
+          check-latest: true
           cache: 'npm'
           cache-dependency-path: './mpc/package-lock.json'
 
